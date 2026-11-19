@@ -17,12 +17,12 @@ type config struct {
 
 type server struct {
 	cfg     config
-	logger  *logger
+	logger  sink
 	fakes   fakes
 	limiter *limiter
 }
 
-func newServer(cfg config, l *logger, f fakes) *server {
+func newServer(cfg config, l sink, f fakes) *server {
 	return &server{cfg: cfg, logger: l, fakes: f, limiter: newLimiter(cfg.perIPMinute, time.Minute)}
 }
 
@@ -43,22 +43,26 @@ func (s *server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.logger.write(event{
-		Time:       start,
-		Event:      "request",
-		Client:     client,
-		Method:     r.Method,
-		Host:       r.Host,
-		URI:        truncate(r.RequestURI, 2048),
-		Path:       r.URL.Path,
-		Query:      truncate(r.URL.RawQuery, 2048),
-		Proto:      r.Proto,
-		UserAgent:  truncate(r.UserAgent(), 512),
-		Headers:    headers(r.Header),
-		Body:       truncate(body, s.cfg.logBody),
-		BodyBytes:  bodyBytes,
-		Trap:       t.name,
-		Status:     rec.status,
-		DurationMS: time.Since(start).Milliseconds(),
+		Time:         start,
+		Event:        "request",
+		Client:       client,
+		Method:       r.Method,
+		Host:         r.Host,
+		URI:          truncate(r.RequestURI, 2048),
+		Path:         r.URL.Path,
+		Query:        truncate(r.URL.RawQuery, 2048),
+		Proto:        r.Proto,
+		UserAgent:    truncate(r.UserAgent(), 512),
+		Headers:      headers(r.Header),
+		Body:         truncate(body, s.cfg.logBody),
+		BodyBytes:    bodyBytes,
+		Trap:         t.name,
+		Status:       rec.status,
+		DurationMS:   time.Since(start).Milliseconds(),
+		WAFFlagged:   r.Header.Get("X-Waf-Flagged"),
+		WAFScore:     r.Header.Get("X-Waf-Score"),
+		WAFRules:     r.Header.Get("X-Waf-Rules"),
+		WAFRequestID: r.Header.Get("X-Waf-Request-Id"),
 	})
 }
 
@@ -98,7 +102,7 @@ var skippedHeaders = map[string]bool{
 func headers(h http.Header) map[string]string {
 	out := make(map[string]string, len(h))
 	for k, v := range h {
-		if skippedHeaders[k] {
+		if skippedHeaders[k] || strings.HasPrefix(k, "X-Waf-") {
 			continue
 		}
 		out[k] = truncate(strings.Join(v, ", "), 1024)

@@ -19,17 +19,27 @@ func main() {
 		logBody:     envInt("LOG_BODY", 4<<10),
 		perIPMinute: envInt("LOG_PER_IP_MINUTE", 120),
 	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	var out sink = newLogger(os.Stdout)
+	var loki *lokiSink
+	if url := os.Getenv("LOKI_URL"); url != "" {
+		loki = newLokiSink(url, envInt("LOKI_BUFFER", 10000), envInt("LOKI_BATCH", 500), 2*time.Second)
+		go loki.run(ctx)
+		out = loki
+		log.Printf("sending events to %s", url)
+	}
+
 	srv := &http.Server{
 		Addr:              cfg.addr,
-		Handler:           newServer(cfg, newLogger(os.Stdout), newFakes()),
+		Handler:           newServer(cfg, out, newFakes()),
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       60 * time.Second,
 		MaxHeaderBytes:    32 << 10,
 	}
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 	go func() {
 		<-ctx.Done()
 		shutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -39,6 +49,12 @@ func main() {
 	log.Printf("listening on %s", cfg.addr)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
+	}
+	if loki != nil {
+		select {
+		case <-loki.done:
+		case <-time.After(10 * time.Second):
+		}
 	}
 }
 

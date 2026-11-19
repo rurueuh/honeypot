@@ -1,0 +1,677 @@
+{
+  "uid": "honeypot",
+  "title": "Honeypot",
+  "tags": [
+    "honeypot",
+    "waf"
+  ],
+  "timezone": "browser",
+  "editable": false,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "type": "stat",
+      "title": "Requests",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({job=\"honeypot\", event=\"request\"} [$__range]))",
+          "queryType": "instant"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "blue"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "type": "stat",
+      "title": "Flagged by the WAF",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({job=\"honeypot\", event=\"request\", waf_flagged=\"true\"} [$__range]))",
+          "queryType": "instant"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "green"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "type": "stat",
+      "title": "Not flagged",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum(count_over_time({job=\"honeypot\", event=\"request\", waf_flagged=\"false\"} [$__range]))",
+          "queryType": "instant"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "type": "stat",
+      "title": "Clients",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "count(sum by (client) (count_over_time({job=\"honeypot\", event=\"request\"} | json client [$__range])))",
+          "queryType": "instant"
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "purple"
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "type": "timeseries",
+      "title": "Requests by WAF verdict",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (waf_flagged) (count_over_time({job=\"honeypot\", event=\"request\"} [$__auto]))",
+          "legendFormat": "flagged={{waf_flagged}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "stacking": {
+              "mode": "normal"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "type": "table",
+      "title": "Top paths",
+      "gridPos": {
+        "h": 10,
+        "w": 8,
+        "x": 0,
+        "y": 12
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "topk(25, sum by (path) (count_over_time({job=\"honeypot\", event=\"request\"} | json path [$__range])))",
+          "queryType": "instant",
+          "legendFormat": "{{path}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "lastNotNull"
+            ],
+            "mode": "seriesToRows"
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Last *",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 7,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "type": "table",
+      "title": "Top clients",
+      "gridPos": {
+        "h": 10,
+        "w": 8,
+        "x": 8,
+        "y": 12
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "topk(25, sum by (client) (count_over_time({job=\"honeypot\", event=\"request\"} | json client [$__range])))",
+          "queryType": "instant",
+          "legendFormat": "{{client}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "lastNotNull"
+            ],
+            "mode": "seriesToRows"
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Last *",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 8,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "type": "table",
+      "title": "Fake pages hit",
+      "gridPos": {
+        "h": 10,
+        "w": 8,
+        "x": 16,
+        "y": 12
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "sum by (trap) (count_over_time({job=\"honeypot\", event=\"request\"} | json trap [$__range]))",
+          "queryType": "instant",
+          "legendFormat": "{{trap}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "lastNotNull"
+            ],
+            "mode": "seriesToRows"
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Last *",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 9,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "type": "table",
+      "title": "WAF rules fired",
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 22
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "topk(25, sum by (waf_rules) (count_over_time({job=\"honeypot\", event=\"request\", waf_flagged=\"true\"} | json waf_rules [$__range])))",
+          "queryType": "instant",
+          "legendFormat": "{{waf_rules}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "lastNotNull"
+            ],
+            "mode": "seriesToRows"
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Last *",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 10,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "type": "table",
+      "title": "Top user agents",
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 22
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "topk(25, sum by (ua) (count_over_time({job=\"honeypot\", event=\"request\"} | json ua [$__range])))",
+          "queryType": "instant",
+          "legendFormat": "{{ua}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "lastNotNull"
+            ],
+            "mode": "seriesToRows"
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Last *",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 11,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "type": "table",
+      "title": "Not flagged: paths outside the login page",
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 32
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "topk(50, sum by (path, trap) (count_over_time({job=\"honeypot\", event=\"request\", waf_flagged=\"false\"} | json path, trap | trap != \"portal-login\" [$__range])))",
+          "queryType": "instant",
+          "legendFormat": "{{path}}"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "lastNotNull"
+            ],
+            "mode": "seriesToRows"
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "sort": [
+              {
+                "field": "Last *",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true
+      }
+    },
+    {
+      "id": 12,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "type": "logs",
+      "title": "Not flagged by the WAF (candidates for new rules)",
+      "gridPos": {
+        "h": 14,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{job=\"honeypot\", event=\"request\", waf_flagged=\"false\"} | json | trap != \"portal-login\" | line_format \"{{.client}} {{.method}} {{.uri}} [{{.trap}}] {{.ua}} {{.body}}\""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "id": 13,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "type": "logs",
+      "title": "Flagged by the WAF",
+      "gridPos": {
+        "h": 12,
+        "w": 24,
+        "x": 0,
+        "y": 58
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{job=\"honeypot\", event=\"request\", waf_flagged=\"true\"} | json | line_format \"{{.client}} {{.method}} {{.uri}} rules={{.waf_rules}} score={{.waf_score}} id={{.waf_request_id}}\""
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending",
+        "enableLogDetails": true
+      }
+    },
+    {
+      "id": 14,
+      "datasource": {
+        "type": "loki",
+        "uid": "loki"
+      },
+      "type": "logs",
+      "title": "Volume protection (suppressed and dropped events)",
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 70
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "expr": "{job=\"honeypot\", event=~\"suppressed|dropped\"}"
+        }
+      ],
+      "options": {
+        "showTime": true,
+        "wrapLogMessage": true,
+        "sortOrder": "Descending"
+      }
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  }
+}
