@@ -1,4 +1,4 @@
-FROM grafana/grafana:13.2.5
+FROM grafana/grafana:13.3.1
 ENV GF_AUTH_ANONYMOUS_ENABLED=true \
     GF_AUTH_ANONYMOUS_ORG_ROLE=Editor \
     GF_AUTH_DISABLE_LOGIN_FORM=true \
